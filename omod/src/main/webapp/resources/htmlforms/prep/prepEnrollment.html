@@ -13,9 +13,9 @@
 -->
 <htmlform>
 
-	<script type="text/javascript" src="../moduleResources/kenyaemr/scripts/moment.js"></script>
-	<!--<script type="text/javascript" src="../moduleResources/kenyaemr/scripts/controllers/facility.js"></script>-->
-	<style>
+    <script type="text/javascript" src="../moduleResources/kenyaemr/scripts/moment.js"></script>
+    <!--<script type="text/javascript" src="../moduleResources/kenyaemr/scripts/controllers/facility.js"></script>-->
+    <style>
 		.simple-table {
 			border: solid 1px #DDEEEE;
 			border-collapse: collapse;
@@ -38,7 +38,7 @@
 		}
 
 	</style>
-	<script type="text/javascript">
+    <script type="text/javascript">
         /**
          * TODO use a lookup tag to get these concept ids. Will require HTML-463
          */
@@ -46,17 +46,26 @@
         var NO_CONCEPT_ID = 164144;
         var TRANSIT =164931;
         var RE_ENROLL=159833;
-        var POPULATION_TYPE =  "<lookup expression="fn.latestObs(164930).getValueCoded()"/>";
-        var KEY_POPULATION =  "<lookup expression="fn.latestObs(160581).getValueCoded()"/>";
-        var DISCORDANT =  "<lookup expression="fn.latestObs(6096).getValueCoded()"/>";
+        var POPULATION_TYPE_CONCEPT =  "<lookup expression="fn.latestObs(164930).getValueCoded()"/>";
+        var POPULATION_TYPE = POPULATION_TYPE_CONCEPT.replace(/[^\d]/g, '');
+        var KEY_POPULATION_CONCEPT =  "<lookup expression="fn.latestObs(160581).getValueCoded()"/>";
+        var KEY_POPULATION = KEY_POPULATION_CONCEPT.replace(/[^\d]/g, '');
+        var DISCORDANT_CONCEPT =  "<lookup expression="fn.latestObs(6096).getValueCoded()"/>";
+        var DISCORDANT = DISCORDANT_CONCEPT.replace(/[^\d]/g, '');
         var PATIENT_HAS_UPN = <lookup expression="kenyaemr.hasHivUniquePatientNumber()" />;
+        var IS_KDoD_SITE = <lookup expression="kenyaemr.getFacilityType()" />;
         var ctxPath = typeof openmrsContextPath === 'string' ? openmrsContextPath : OPENMRS_CONTEXT_PATH;
         var populationTypeSelected = function () {
             var val = jq(this).val();
             var keypop = jq('#key-populations');
+            var pripop = jq('#priority-populations');
+            //if key population
             if (val == 164929 ){
                 jq("#key-populations").show();
+                jq("#priority-populations").hide();
+                clearHiddenSections([pripop]);
             }
+            //if general or discordant population
             if(val == 164928 || val == 6096){
                 jq("#female-sex-worker input[type=checkbox]").prop("checked", false);
                 jq("#men-with-men input[type=checkbox]").prop("checked", false);
@@ -65,7 +74,14 @@
                 jq("#transgender input[type=checkbox]").prop("checked", false);
                 jq("#prisoner input[type=checkbox]").prop("checked", false);
                 jq("#key-populations").hide();
-                clearHiddenSections(keypop);
+                jq("#priority-populations").hide();
+                clearHiddenSections([keypop,pripop]);
+            }
+            //if priority population
+            if (val == 138643 ){
+                jq("#priority-populations").show();
+                jq("#key-populations").hide();
+                clearHiddenSections([keypop]);
             }
         }
         //On Ready
@@ -73,12 +89,21 @@
             var hasBeenOnARVs = "<lookup expression="fn.latestObs(160533).getValueCoded()"/>";
             var pgender = "<lookup expression="patient.gender" />";
             var pAge = parseInt('<lookup expression="patient.age"/>');
-            jq("#key-populations").hide();
+            jq('#key-populations').hide();
+            jq('#priority-populations').hide();
             jq('input[type=radio].key-population').prop("checked", false);
             jq('#upnError').hide();
             jq("#prep-id input[type=text]").blur(checkForExistingPatientIdentifiers);
             jq('#population_type :input[type=radio]').change(populationTypeSelected);
 
+			if(IS_KDoD_SITE==false)
+            {
+                jq('#dodOnly').hide();
+            }
+            else
+            {
+                jq('#dodOnly').show();
+            }
 
             ageGroup();
             jq('.muac').hide();
@@ -107,6 +132,7 @@
                 jq('#key-population').show();
             }else if(POPULATION_TYPE == 138643) {
                 jq('#population-type:text').val('Priority Population');
+                jq('#priority-population').show();
             }else{
                 jq('#population-type:text').val('Missing');
 			}
@@ -134,6 +160,8 @@
                 jq('#priority-population:text').val('AGYW');
             }else if(KEY_POPULATION == 162277) {
                 jq('#priority-population:text').val('Prisoner');
+            }else if(IS_KDoD_SITE == true &amp;&amp; KEY_POPULATION == 165192 ) {
+				jq('#priority-population:text').val('Military and other uniformed services');
             }else{
                 jq('#priority-population:text').val('NA');
             }
@@ -411,59 +439,61 @@
 
 	</script>
 
-	<div class="ke-form-header">
-		<table style="width: 100%">
-			<tr>
-				<td>
-				Initiation date: <encounterDate id="encounter-date" showTime="true" />
-				</td>
-				<td>Initiated by: <encounterProvider default="currentUser" /></td>
-				<td>Initiated at: <encounterLocation default="GlobalProperty:kenyaemr.defaultLocation" /></td>
+    <div class="ke-form-header">
+        <table style="width: 100%">
+            <tr>
+                <td>
+                    Initiation date: <encounterDate id="encounter-date" showTime="true" />
+                </td>
+                <td>Initiated by: <encounterProvider default="currentUser" /></td>
+                <td>Initiated at: <encounterLocation default="GlobalProperty:kenyaemr.defaultLocation" /></td>
 
-				<ifMode mode="EDIT">
-					<script type="text/javascript">
+                <ifMode mode="EDIT">
+                    <script type="text/javascript">
                         jq(function(){
 
                             var popTypeSelected = getValue('population_type.value');
                             if (popTypeSelected == 164929 ){
                                 jq("#key-populations").show();
+                            } else if(popTypeSelected == 138643 ) {
+                            	jq("#priority-populations").show();
                             }
                         });
 					</script>
-				</ifMode>
+                </ifMode>
 
-			</tr>
-		</table>
-	</div>
+            </tr>
+        </table>
+    </div>
 
-	<div class="ke-form-content">
-		<fieldset>
-			<legend>Client Source</legend>
-			<table class="simple-table">
-				<tr>
-					<td>Client Type</td>
-					<td>
-						<obs
-								id="transfer-in-status" conceptId="164932" style="radio"
-								answerConceptIds="164144,160563,162904"
-								answerLabels="New Client,Transfer in,Re-start"
-								required="true"
-						/>
-					</td>
-				</tr>
+    <div class="ke-form-content">
+        <fieldset>
+            <legend>Client Source</legend>
+            <table class="simple-table">
                 <tr>
-                   <td> Population type </td>
+                    <td>Client Type</td>
                     <td>
-                    <obs conceptId="164930"
-                         answerConceptIds="164928,6096,164929"
-                         answerLabels="General Population,Discordant Couple,Key Population" id="population_type"
-                         style="radio" />
+                        <obs
+                                id="transfer-in-status" conceptId="164932" style="radio"
+                                answerConceptIds="164144,160563,162904"
+                                answerLabels="New Client,Transfer in,Re-start"
+                                required="true"
+                        />
+                    </td>
+                </tr>
+                <tr>
+                    <td> Population type </td>
+                    <td>
+                        <obs conceptId="164930"
+                             answerConceptIds="164928,6096,164929,138643"
+                             answerLabels="General Population,Discordant Couple,Key Population,Priority Population" id="population_type"
+                             style="radio" />
                     </td>
                     <td id="key-populations">
-						<obs conceptId="160581AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" answerConceptId="162277AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-							 answerLabel="People in prison and other closed settings" style="checkbox"  id="prisoner"/><br/>
-						<obs conceptId="160581AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" answerConceptId="165100"
-							 answerLabel="Transgender" style="checkbox"  id="transgender"/><br/>
+                        <obs conceptId="160581AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" answerConceptId="162277AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                             answerLabel="People in prison and other closed settings" style="checkbox"  id="prisoner"/><br/>
+                        <obs conceptId="160581AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" answerConceptId="165100"
+                             answerLabel="Transgender" style="checkbox"  id="transgender"/><br/>
                         <obs conceptId="160581AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" answerConceptId="105AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                              answerLabel="PWID" style="checkbox"  id="pwid"/><br/>
                         <includeIf velocityTest="$patient.gender == 'M'">
@@ -480,203 +510,218 @@
                         </includeIf>
 
                     </td>
+                    <td id="priority-populations">
+                        <obs conceptId="160581AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" answerConceptId="159674AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                             answerLabel="Fisher folk" style="radio" /><br/>
+                        <obs conceptId="160581AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" answerConceptId="162198AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                             answerLabel="Truck driver" style="radio" /><br/>
+                        <includeIf velocityTest="$patient.gender == 'F'">
+                            <obs conceptId="160581AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" answerConceptId="160549AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                                 answerLabel="Adolescent and young girls" style="radio" id="adyg" /><br/>
+                        </includeIf>
+                        <obs conceptId="160581AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" answerConceptId="162277AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                             answerLabel="Prisoner" style="radio" /><br/>
+                        <obs conceptId="160581AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" answerConceptId="1175AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                             answerLabel="Not applicable" style="radio" id="other" /><br/>
+                        <obs conceptId="160581AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" answerConceptId="165192"
+                             answerLabel="Military and other uniformed services" style="radio" id="dodOnly" /><br/>
+                    </td>
 
                 </tr>
-				<tr>
-					<td>Referred from:</td>
-					<td colspan="3">
-						<obs id="entry-point" style="radio" answerSeparator=" "
-							 conceptId="160540AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-							 answerConceptIds="159938AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,160539AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,
+                <tr>
+                    <td>Referred from:</td>
+                    <td colspan="3">
+                        <obs id="entry-point" style="radio" answerSeparator=" "
+                             conceptId="160540AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                             answerConceptIds="159938AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,160539AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,
 							 159937AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,160536AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,160541AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,
 							 160542AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,162050AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,160551AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,
 							 163488AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,159927AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,164945,5622AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-							 answerLabels="HBTC,VCT Site,MCH,IPD-Adult,TB Clinic,OPD,CCC,Self Referral,Community,Outreach,Peer,Other(eg STI)"
-							 required="true"
-						/>
-					<td><obsgroup groupingConceptId="161358AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA">
-						<obs conceptId="160632AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"/>
-					</obsgroup></td>
-					</td>
-				</tr>
-				<tr>
-					<td>Unique PrEP Number (UPN)</td>
-					<td> &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
-						<span id="prep-id"><patient id="upn" field="identifier" identifierTypeId="ac64e5cb-e3e2-4efa-9060-0dd715a843a1" /></span>
-						<span id="upnError" class="error"></span>
-					</td>
-				</tr>
-				<tr>
-					<td>NHIF Number</td>
-					<td> &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
-						<span id="nhif-id"><patient id="nhif" field="identifier" identifierTypeId="09ebf4f9-b673-4d97-b39b-04f94088ba64" required="false" /></span>
-					</td>
-				</tr>
-			</table>
-			<table id="transit-patient" style="display: inline-block">
-				<tr>
-					<td>Facility from: </td>
-					<td> &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
-						<obsgroup groupingConceptId="162724AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA">
-							<obs conceptId="161550AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"/>
-						</obsgroup>
-					</td>
-				</tr>
-			</table>
-		</fieldset>
-		<fieldset id="transfer-history" >
-			<legend>Transfer Status</legend>
-			<div id="transfer-details">
-				<table class="simple-table">
-					<tr>
-						<td>Transfer in date:</td>
-						<td><obs conceptId="160534AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" id="transfer-in-date"/></td>
-					</tr>
-					<tr>
-						<td>Transferred from facility:</td>
-						<td><obs conceptId="160535AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"  size="20"/></td>
-					</tr>
-					<tr>
-						<td>Date <i>first</i> initiated in PrEP care:</td>
-						<td><obs conceptId="160555AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" id="first-enrolled-date"/></td>
-					</tr>
-					<tr>
-						<td>Date started PrEP at transferring facility:</td>
-						<td><obs conceptId="159599AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" id ="art-start-date"/></td>
-					</tr>
-				</table>
-			</div>
-		</fieldset>
-		<fieldset id="patient-history" >
-			<legend>PrEP Initiation Details</legend>
+                             answerLabels="HBTC,VCT Site,MCH,IPD-Adult,TB Clinic,OPD,CCC,Self Referral,Community,Outreach,Peer,Other(eg STI)"
+                             required="true"
+                        />
+                    <td><obsgroup groupingConceptId="161358AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA">
+                        <obs conceptId="160632AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"/>
+                    </obsgroup></td>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Unique PrEP Number (UPN)</td>
+                    <td> &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
+                        <span id="prep-id"><patient id="upn" field="identifier" identifierTypeId="ac64e5cb-e3e2-4efa-9060-0dd715a843a1" /></span>
+                        <span id="upnError" class="error"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>NHIF Number</td>
+                    <td> &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
+                        <span id="nhif-id"><patient id="nhif" field="identifier" identifierTypeId="09ebf4f9-b673-4d97-b39b-04f94088ba64" required="false" /></span>
+                    </td>
+                </tr>
+            </table>
+            <table id="transit-patient" style="display: inline-block">
+                <tr>
+                    <td>Facility from: </td>
+                    <td> &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
+                        <obsgroup groupingConceptId="162724AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA">
+                            <obs conceptId="161550AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"/>
+                        </obsgroup>
+                    </td>
+                </tr>
+            </table>
+        </fieldset>
+        <fieldset id="transfer-history" >
+            <legend>Transfer Status</legend>
+            <div id="transfer-details">
+                <table class="simple-table">
+                    <tr>
+                        <td>Transfer in date:</td>
+                        <td><obs conceptId="160534AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" id="transfer-in-date"/></td>
+                    </tr>
+                    <tr>
+                        <td>Transferred from facility:</td>
+                        <td><obs conceptId="160535AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"  size="20"/></td>
+                    </tr>
+                    <tr>
+                        <td>Date <i>first</i> initiated in PrEP care:</td>
+                        <td><obs conceptId="160555AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" id="first-enrolled-date"/></td>
+                    </tr>
+                    <tr>
+                        <td>Date started PrEP at transferring facility:</td>
+                        <td><obs conceptId="159599AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" id ="art-start-date"/></td>
+                    </tr>
+                </table>
+            </div>
+        </fieldset>
+        <fieldset id="patient-history" >
+            <legend>PrEP Initiation Details</legend>
 
-			<table class="simple-table" >
+            <table class="simple-table" >
 
-				<tr>
-					<td>Client has previously been on PrEP</td>
-					<td>
-						<obs id="art-status" conceptId="160533AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" style="yes_no" />
-					</td>
-					<td>
-					&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
-					</td>
-					<td>
-						<table id="art-history" border="0">
-							<tr>
-								<th>Regimen</th>
-								<th>Date Last Used</th>
-							</tr>
-							 <obsgroup groupingConceptId="160741AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA">
-								<tr>
-									<td><obs conceptId="1088AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-											 answerConceptIds="104567AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,84795AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,161364AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-											 answerLabels="TDF/FTC,TDF,TDF/3TC" />
-									</td>
-									<td> <obs conceptId="162881AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"  id="prep-last-date" allowFutureDates="false" />	</td>
-								</tr>
+                <tr>
+                    <td>Client has previously been on PrEP</td>
+                    <td>
+                        <obs id="art-status" conceptId="160533AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" style="yes_no" />
+                    </td>
+                    <td>
+                        &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
+                    </td>
+                    <td>
+                        <table id="art-history" border="0">
+                            <tr>
+                                <th>Regimen</th>
+                                <th>Date Last Used</th>
+                            </tr>
+                            <obsgroup groupingConceptId="160741AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA">
+                                <tr>
+                                    <td><obs conceptId="1088AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                                             answerConceptIds="104567AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,84795AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,161364AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                                             answerLabels="TDF/FTC,TDF,TDF/3TC" />
+                                    </td>
+                                    <td> <obs conceptId="162881AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"  id="prep-last-date" allowFutureDates="false" />	</td>
+                                </tr>
 
-							</obsgroup>
-						</table>
-					</td>
-				</tr>
-			</table>
+                            </obsgroup>
+                        </table>
+                    </td>
+                </tr>
+            </table>
 
-		</fieldset>
-			<fieldset id ="underage">
-				<legend>Client Social Status</legend>
-				<table id="underage-details" class="simple-table">
-					<includeIf velocityTest="$patient.age &lt; 19">
-					<tr>
-						<td>In school :
-							&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
-							<obs conceptId="5629AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-								 style="yes_no" required = "true"/>
-						</td>
-					</tr>
-					</includeIf>
-					<tr>
-						<td>
-							<table class="simple-table" id="tbl-known-positive">
-								<td>
-									<u>
-										Recorded Recently from HTS
-									</u>
-									<br/>
-									<br/>Population type:&#160;&#160;&#160;&#160;&#160;
-									<input type="text" name="population-type" id="population-type" readonly="True" />
-									&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
-									<br/>
-									<br/>
-									Key population type: &#160;&#160;&#160;&#160;&#160;
-									<input type="text" name="key-population" id="key-population" readonly="True" />
-									<br/>
-									<br/>
-									Priority population:
-									<input type="text" name="priority-population" id="priority-population" readonly="True" />
-									<br/>
-									<br/>
-									Discordant: &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
-									<input type="text" name="discordant" id="discordant" readonly="True" />
-									<br/>
-								</td>
-							</table>
-						</td>
-					</tr>
-				</table>
-			</fieldset>
+        </fieldset>
+        <fieldset id ="underage">
+            <legend>Client Social Status</legend>
+            <table id="underage-details" class="simple-table">
+                <includeIf velocityTest="$patient.age &lt; 19">
+                    <tr>
+                        <td>In school :
+                            &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
+                            <obs conceptId="5629AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                                 style="yes_no" required = "true"/>
+                        </td>
+                    </tr>
+                </includeIf>
+                <tr>
+                    <td>
+                        <table class="simple-table" id="tbl-known-positive">
+                            <td>
+                                <u>
+                                    Recorded Recently from HTS
+                                </u>
+                                <br/>
+                                <br/>Population type:&#160;&#160;&#160;&#160;&#160;
+                                <input type="text" name="population-type" id="population-type" readonly="True" />
+                                &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
+                                <br/>
+                                <br/>
+                                Key population type: &#160;&#160;&#160;&#160;&#160;
+                                <input type="text" name="key-population" id="key-population" readonly="True" />
+                                <br/>
+                                <br/>
+                                Priority population:
+                                <input type="text" name="priority-population" id="priority-population" readonly="True" />
+                                <br/>
+                                <br/>
+                                Discordant: &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
+                                <input type="text" name="discordant" id="discordant" readonly="True" />
+                                <br/>
+                            </td>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </fieldset>
 
-		<fieldset id="treatment-supporter-fieldset" >
-				<legend>Adherence Buddy</legend>
-				<table id="treatment-supporter" class="simple-table">
-					<tr>
-						<th align="left">Name</th>
-						<th align="left">Alias</th>
-						<th align="left">Relationship</th>
-						<th align="left">Telephone Number</th>
-						<th align="left">Alternative Phone Number</th>
-					</tr>
-					<repeat>
-						<template>
-							<obsgroup groupingConceptId="161642AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA">
-								<tr>
-									<td>
-										<obs conceptId="160638AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" />
-									</td>
-									<td>
-									<obs conceptId="165038" />
-									</td>
-									<td>
-										<obs
-												id="treatment-supporter-relationship" conceptId="160640AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" style="dropdown"
-												answerConceptIds="973AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,972AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,160639AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,1527AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,5617AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,163565AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,5622AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-												answerLabels="Grandparent,Sibling,Guardian,Parent,Spouse,Partner,Other"
-										/>
-									</td>
-									<td><obs conceptId="160642AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" id="ts-telephone"/></td>
-									<td><obs conceptId="160641AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"/></td>
-								</tr>
-							</obsgroup>
-						</template>
-						<render n="1" concept="Treatment Supporter"/>
-						<render n="2" concept="Treatment Supporter"/>
-					</repeat>
-				</table>
-			</fieldset>
-			<!--<fieldset>
-				<legend>Appointment Scheduler</legend>
-				<table>
-					<tr>
-						<td id="next-appointment-label">Next appointment date:</td>
-						<td id="next-appointment-date"><obs conceptId="5096AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" allowFutureDates="true"/></td>
+        <fieldset id="treatment-supporter-fieldset" >
+            <legend>Adherence Buddy</legend>
+            <table id="treatment-supporter" class="simple-table">
+                <tr>
+                    <th align="left">Name</th>
+                    <th align="left">Alias</th>
+                    <th align="left">Relationship</th>
+                    <th align="left">Telephone Number</th>
+                    <th align="left">Alternative Phone Number</th>
+                </tr>
+                <repeat>
+                    <template>
+                        <obsgroup groupingConceptId="161642AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA">
+                            <tr>
+                                <td>
+                                    <obs conceptId="160638AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" />
+                                </td>
+                                <td>
+                                    <obs conceptId="165038" />
+                                </td>
+                                <td>
+                                    <obs
+                                            id="treatment-supporter-relationship" conceptId="160640AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" style="dropdown"
+                                            answerConceptIds="973AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,972AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,160639AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,1527AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,5617AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,163565AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,5622AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                                            answerLabels="Grandparent,Sibling,Guardian,Parent,Spouse,Partner,Other"
+                                    />
+                                </td>
+                                <td><obs conceptId="160642AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" id="ts-telephone"/></td>
+                                <td><obs conceptId="160641AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"/></td>
+                            </tr>
+                        </obsgroup>
+                    </template>
+                    <render n="1" concept="Treatment Supporter"/>
+                    <render n="2" concept="Treatment Supporter"/>
+                </repeat>
+            </table>
+        </fieldset>
+        <!--<fieldset>
+            <legend>Appointment Scheduler</legend>
+            <table>
+                <tr>
+                    <td id="next-appointment-label">Next appointment date:</td>
+                    <td id="next-appointment-date"><obs conceptId="5096AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" allowFutureDates="true"/></td>
+                </tr>
+            </table>
+        </fieldset>-->
 
-					</tr>
-				</table>
-			</fieldset>-->
+        <enrollInProgram programId="214cad1c-bb62-4d8e-b927-810a046daf62"/>
+    </div>
 
-		<enrollInProgram programId="214cad1c-bb62-4d8e-b927-810a046daf62"/>
-	</div>
-
-	<div class="ke-form-footer">
-		<submit />
-	</div>
+    <div class="ke-form-footer">
+        <submit />
+    </div>
 </htmlform>
